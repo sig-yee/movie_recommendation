@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+import gzip
 from pathlib import Path
+import pickle
 import re
 from typing import Any
 
@@ -31,6 +33,7 @@ class MovieRecommender:
     def __init__(self, base_dir: Path) -> None:
         self.base_dir = base_dir
         self.data_dir = base_dir / "data"
+        self.cache_path = base_dir / "artifacts" / "recommender_cache.pkl.gz"
         self.data_dir.mkdir(exist_ok=True)
 
         self.ready = False
@@ -51,6 +54,16 @@ class MovieRecommender:
         normalized = re.sub(r"[^0-9a-zA-Z가-힣]+", " ", text.casefold())
         return " ".join(normalized.split())
 
+    @staticmethod
+    def _public_movie(item: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "movie_id": item["movie_id"],
+            "title": item["title"],
+            "year": item["year"],
+            "avg_rating": item["avg_rating"],
+            "rating_count": item["rating_count"],
+        }
+
     def dataset_status(self) -> dict[str, Any]:
         return {
             "ready": self.ready,
@@ -63,10 +76,13 @@ class MovieRecommender:
 
     def _load(self) -> None:
         try:
-            movies_path, ratings_path = self._resolve_dataset_paths()
-            movies = self._read_dataset_csv(movies_path)
-            ratings = self._read_dataset_csv(ratings_path)
-            self._build_indexes(movies, ratings)
+            if self.cache_path.exists():
+                self._load_cache()
+            else:
+                movies_path, ratings_path = self._resolve_dataset_paths()
+                movies = self._read_dataset_csv(movies_path)
+                ratings = self._read_dataset_csv(ratings_path)
+                self._build_indexes(movies, ratings)
             self.ready = True
             self.state = DatasetState(True, "Dataset loaded successfully.")
         except Exception as exc:  # pragma: no cover
@@ -102,6 +118,18 @@ class MovieRecommender:
         if signature == b"PK":
             return pd.read_csv(path, compression="zip")
         return pd.read_csv(path)
+
+    def _load_cache(self) -> None:
+        with gzip.open(self.cache_path, "rb") as file_obj:
+            payload = pickle.load(file_obj)
+
+        self.movies_df = payload["movies_df"]
+        self.movie_lookup = payload["movie_lookup"]
+        self.movies_by_id = payload["movies_by_id"]
+        self.movie_to_users = defaultdict(set, payload["movie_to_users"])
+        self.user_to_movies = defaultdict(list, payload["user_to_movies"])
+        self.movie_popularity = payload["movie_popularity"]
+        self.movie_avg_rating = payload["movie_avg_rating"]
 
     def _build_indexes(self, movies: pd.DataFrame, ratings: pd.DataFrame) -> None:
         movies = movies.copy()
@@ -209,13 +237,7 @@ class MovieRecommender:
                     score,
                     item["rating_count"],
                     item["avg_rating"],
-                    {
-                        "movie_id": item["movie_id"],
-                        "title": item["title"],
-                        "year": item["year"],
-                        "avg_rating": item["avg_rating"],
-                        "rating_count": item["rating_count"],
-                    },
+                    self._public_movie(item),
                 )
             )
 
@@ -285,7 +307,7 @@ class MovieRecommender:
             blended_score = round(score + avg_rating * 2 + min(popularity, 5000) / 1000, 3)
             recommendations.append(
                 {
-                    **movie,
+                    **self._public_movie(movie),
                     "support": int(candidate_support[movie_id]),
                     "score": blended_score,
                 }

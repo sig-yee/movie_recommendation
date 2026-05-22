@@ -28,6 +28,27 @@ http://127.0.0.1:5000
 
 앱은 아래 순서로 데이터를 찾습니다.
 
+1. `artifacts/recommender_cache.pkl.gz`
+2. `data/Netflix_Dataset_Movie.csv`
+3. `data/Netflix_Dataset_Rating.csv`
+4. 없으면 `kagglehub`로 `rishitjavia/netflix-movie-rating-dataset` 다운로드
+
+배포용으로는 `artifacts/recommender_cache.pkl.gz`를 우선 사용합니다. 이 파일이 있으면 대용량 원본 CSV 없이도 빠르게 시작할 수 있습니다.
+
+## Render 배포
+
+Render 기준 권장 설정:
+
+- Build Command: `pip install -r requirements.txt`
+- Start Command: `gunicorn app:app`
+- Health Check Path: `/api/health`
+
+루트에 `render.yaml`과 `.python-version`도 포함했습니다.
+
+## 원본 데이터셋 준비
+
+원본 CSV가 필요한 경우 앱은 아래 순서로 데이터를 찾습니다.
+
 1. `data/Netflix_Dataset_Movie.csv`
 2. `data/Netflix_Dataset_Rating.csv`
 3. 없으면 `kagglehub`로 `rishitjavia/netflix-movie-rating-dataset` 다운로드
