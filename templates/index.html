@@ -29,9 +29,18 @@
 
           <label class="search-label" for="search-input">영화 검색</label>
           <div class="search-box">
-            <input id="search-input" type="text" placeholder="예: Character, Firetrap, Mostly Martha">
+            <input
+              id="search-input"
+              type="text"
+              placeholder="예: char, lord ring, silence"
+            >
             <button id="search-button" type="button">검색</button>
           </div>
+          <p class="search-hint">
+            전체 제목을 다 입력하지 않아도 됩니다.
+            일부만 입력해도 검색됩니다.
+            예: `Character`, `Lord of the Rings: The Fellowship of the Ring`, `The Silence of the Lambs`
+          </p>
 
           <div id="search-results" class="search-results"></div>
 

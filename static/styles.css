@@ -175,6 +175,13 @@ button {
   margin-top: 14px;
 }
 
+.search-hint {
+  margin: 10px 2px 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
 .result-item,
 .recommendation-card {
   background: var(--panel-strong);
